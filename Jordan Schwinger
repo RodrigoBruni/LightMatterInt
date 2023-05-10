@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?><simulation xmds-version="2">
+
+	<!-- /// BEGINNING OF THE DESCRIPTION BLOCK /// -->
+
+		<name> DrummondJS </name>
+		<author> Rodrigo Bruni </author>
+		<description> 
+					Drummond's Hamiltonian in the +P representation using JS mapping  
+		</description>
+
+	<!-- /// END OF THE DESCRIPTION BLOCK /// -->
+
+	<!-- /// BEGINNING OF DEFINITIONS BLOCK /// -->
+
+		<!-- /// BEGINNING OF THE PARAMETERS DEFINITIONS BLOCK /// -->
+
+			<features>
+					<diagnostics />
+					<error_check />
+					<benchmark />
+					<!-- auto_vectorise /-->
+					<!-- bing /-->
+					<globals>
+						<![CDATA[
+							real DeltaOmega = 0.01;   
+							real g = 0.0045;
+
+							real DeltaOmegaN = 0.001	; 
+							double theta = 0 ; // M_PI_2 , M_PI_4 , M_PI or 0
+
+							real A = 1; 
+							// A is a parameter introduced to set the noise to zero when we need to
+							// A = 1 or 0 corresponds to the presence/absence of noise
+						]]>
+					</globals>
+					<openmp />
+					<fftw plan="patient" />
+			</features>
+
+		<!-- /// END OF THE PARAMETERS DEFINITIONS BLOCK /// -->
+
+		<!-- /// BEGINNING OF THE GEOMETRY BLOCK /// -->
+
+			<geometry>
+				<propagation_dimension> t </propagation_dimension>
+					<transverse_dimensions>
+						<dimension name="j " type="integer" lattice="2" domain="(0,1)"   />
+					</transverse_dimensions>
+			</geometry>
+
+		<!-- /// END OF THE GEOMETRY BLOCK /// -->
+
+		<!-- /// BEGINING OF THE INITIAL CONDITIONS BLOCK /// -->
+
+			<vector name="lambda" type="complex" dimensions="j ">
+				<components> Gamma GammaPlus alpha alphaPlus beta betaPlus  </components>
+					<initialisation>
+						<![CDATA[
+							Gamma = 10; 
+							GammaPlus = 10;
+							alpha =  0;
+							alphaPlus =   0;
+							beta = 10*sqrt(2);
+							betaPlus =  10*sqrt(2);
+						]]>
+					</initialisation>
+			</vector>
+
+		<!-- /// END OF THE INITIAL CONDITIONS BLOCK /// -->
+
+		<!-- /// BEGINNING OF THE NOISE CONTENT BLOCK  /// -->
+
+			<driver name="multi-path" paths="300" /> <!-- go back to 1000000 eventually -->  
+
+			<noise_vector name="noise" kind="wiener" type="complex" method="dsfmt">
+				<components> etaGamma 	etaGammaBeta etaGammaPlus etaGammaBetaPlus etaBeta 
+					etaBetaGamma etaBetaPlus etaBetaGammaPlus  
+				</components>
+			</noise_vector>
+
+		<!-- /// END OF THE NOISE CONTENT BLOCK /// -->
+
+
+	<!-- /// END OF DEFINITIONS BLOCK /// -->
+
+	<!-- /// BEGINNING OF THE NUMERICAL INTEGRATION BLOCK ( "propagation part" ) /// --> <!-- Go back to  interval="150" steps="300"  and 150 samples as well -->
+
+		<sequence>
+			<integrate algorithm="SI" interval="110" steps="220">
+			<samples>   110 110 110    </samples>
+			<operators>
+				<integration_vectors> lambda </integration_vectors>
+					<dependencies> noise </dependencies>
+						<![CDATA[
+								
+							dGamma_dt( j=> j) = - i*( DeltaOmega*Gamma( j=> j) 
+														+ g*alpha(  j=> j )*betaPlus(  j=> j )
+													)
+														+ (0.5)*sqrt(2*g)*A*( sqrt( - i*alpha(  j=> j ) )
+																					+ sqrt( i*alpha(  j=> j ) )
+																		)*etaGamma
+
+															+ (0.5)*sqrt(2*g)*A*( sqrt( - i*alpha(  j=> j ) )
+																						- sqrt( i*alpha(  j=> j ) )
+																			)*etaGammaBeta;
+				
+							dGammaPlus_dt( j=> j) =  i*( DeltaOmega*GammaPlus( j=> j) 
+																+ g*alphaPlus(  j=> j )*beta(  j=> j )
+														)
+															+ (0.5)*sqrt(2*g)*A*(sqrt( - i*alphaPlus(  j=> j ) )
+																						+ sqrt( i*alphaPlus(  j=> j ) )
+																			)*etaGammaPlus
+
+																+ (0.5)*sqrt(2*g)*A*(sqrt( - i*alphaPlus(  j=> j ) )
+																							- sqrt( i*alphaPlus(  j=> j ) )
+																				)*etaGammaBetaPlus;													 
+
+							dalpha_dt(  j=> j ) = i*(  - ( 0.5 )*DeltaOmegaN*alpha(  j=> j ) 
+																	- g*beta(  j=> j )*Gamma(  j=> j )
+													);
+
+							dalphaPlus_dt(  j=> j ) = - i*( - ( 0.5 )*DeltaOmegaN*alphaPlus(  j=> j ) 
+																	- g*betaPlus(  j=> j )*GammaPlus(  j=> j )
+															);
+
+							dbeta_dt( j=> j ) = - i*( - ( 0.5 )*DeltaOmegaN*beta(  j=> j ) 
+																	+ g*alpha(  j=> j )*GammaPlus(  j=> j )
+													)
+														+ (0.5)*sqrt(2*g)*A*(sqrt( - i*alpha(  j=> j ) )
+																					+ sqrt( i*alpha(  j=> j ) )
+																			)*etaBeta
+
+															+ (0.5)*sqrt(2*g)*A*(sqrt( - i*alpha(  j=> j ) )
+																						- sqrt( i*alpha(  j=> j ) )
+																			)*etaBetaGamma;												
+																
+
+
+							dbetaPlus_dt( j=> j ) = i*( - ( 0.5 )*DeltaOmegaN*betaPlus(  j=> j ) 
+																	+ g*alphaPlus(  j=> j )*Gamma(  j=> j )
+													)
+														+  (0.5)*sqrt(2*g)*A*(sqrt( - i*alphaPlus(  j=> j ) )
+																						+ sqrt( i*alphaPlus(  j=> j ) )
+																			)*etaBetaPlus 
+
+															+  (0.5)*sqrt(2*g)*A*(sqrt( - i*alphaPlus(  j=> j ) )
+																						- sqrt( i*alphaPlus(  j=> j ) )
+																				)*etaBetaGammaPlus;											
+
+
+						]]>
+			</operators>
+			</integrate>
+		</sequence>
+  
+	<!-- /// END OF THE NUMERICAL INTEGRATION BLOCK ( "propagation part" ) /// -->
+
+	<!-- /// BEGINNING OF THE OUTPUT BLOCK ( SAMPLING GROUPS ) /// -->
+
+		<output>
+			<sampling_group basis="j " initial_sample="yes">
+				<moments> GammaRealJS GammaPlusRealJS NumJS  </moments>
+					<dependencies> lambda </dependencies>
+						<![CDATA[
+							GammaRealJS = Gamma.Re();
+			
+							GammaPlusRealJS = GammaPlus.Re();
+		
+							NumJS= Re(Gamma*GammaPlus);
+							
+						]]>
+			</sampling_group>
+
+			<sampling_group basis="j(0) " initial_sample="yes">
+				<moments> NtotalGammaJS NtotalGammaAndSpinJS NtotalSpinJS </moments>
+					<dependencies> lambda </dependencies>
+						<![CDATA[
+							
+							NtotalGammaJS = 0.5*Re(Gamma*GammaPlus);
+							
+							NtotalSpinJS =  0.5*( 0.5*( Re(alpha*alphaPlus - beta*betaPlus) 
+													) 
+												);
+
+							NtotalGammaAndSpinJS =  NtotalGammaJS + NtotalSpinJS;
+						]]>
+			</sampling_group>
+
+			<sampling_group basis="j(0) " initial_sample="yes">
+				<moments> XReJS XImJS XsqrReJS XsqrImJS  </moments>
+					<dependencies> lambda </dependencies>
+						<![CDATA[
+
+										XReJS = (0.5)*(1/sqrt(2))*Re(  exp( - i*theta)*Re(Gamma) 
+																		+  exp( i*theta)*Re(GammaPlus)  
+																	);	
+							
+										XImJS = (0.5)*(1/sqrt(2))*Im(  exp( - i*theta)*Re(Gamma) 
+																			+  exp( i*theta)*Re(GammaPlus) 
+																	);
+
+										XsqrReJS = (0.5)*(0.5)*Re(  1 +  2*Re(Gamma*GammaPlus)
+																		+ exp(- 2*i*theta)*Re(Gamma*Gamma)
+																		+ exp( 2*i*theta)*Re(GammaPlus*GammaPlus)  			
+																	);
+
+										XsqrImJS = (0.5)*(0.5)*Im( 1 +  2*Im( Re(Gamma*GammaPlus) )
+																+  exp(- 2*i*theta)*Re(Gamma*Gamma)
+																+  exp( 2*i*theta)*Re(GammaPlus*GammaPlus)
+														     	);
+
+								
+
+							
+						]]>
+			</sampling_group>
+
+		</output>
+
+	<!-- /// END OF THE OUTPUT BLOCK ( SAMPLING GROUPS ) /// -->
+
+</simulation>
